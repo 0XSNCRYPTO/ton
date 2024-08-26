@@ -77,6 +77,10 @@ class AdnlPeerTableImpl : public AdnlPeerTable {
                         td::actor::ActorId<AdnlChannel> channel) override;
   void unregister_channel(AdnlChannelIdShort id) override;
 
+  void check_id_exists(AdnlNodeIdShort id, td::Promise<bool> promise) override {
+    promise.set_value(local_ids_.count(id));
+  }
+
   void write_new_addr_list_to_db(AdnlNodeIdShort local_id, AdnlNodeIdShort peer_id, AdnlDbItem node,
                                  td::Promise<td::Unit> promise) override;
   void get_addr_list_from_db(AdnlNodeIdShort local_id, AdnlNodeIdShort peer_id,
@@ -102,6 +106,7 @@ class AdnlPeerTableImpl : public AdnlPeerTable {
 
   void create_tunnel(AdnlNodeIdShort dst, td::uint32 size,
                      td::Promise<std::pair<td::actor::ActorOwn<AdnlTunnel>, AdnlAddress>> promise) override;
+  void get_conn_ip_str(AdnlNodeIdShort l_id, AdnlNodeIdShort p_id, td::Promise<td::string> promise) override;
 
   struct PrintId {};
   PrintId print_id() const {

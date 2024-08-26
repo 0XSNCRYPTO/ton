@@ -26,6 +26,7 @@
 #include "vm/cells/MerkleUpdate.h"
 #include "block/block-parse.h"
 #include "block/block-auto.h"
+#include "td/utils/filesystem.h"
 
 #define LAZY_STATE_DESERIALIZE 1
 
@@ -127,6 +128,15 @@ td::Status ShardStateQ::init() {
     return td::Status::Error(-668, "header of unpacked shardchain state for block "s + blkid.id.to_str() +
                                        " contains BlockId " + hdr_id.to_str() +
                                        " different from the one originally required");
+  }
+  if (info.r1.master_ref.write().fetch_long(1)) {
+    BlockIdExt mc_id;
+    if (!block::tlb::t_ExtBlkRef.unpack(info.r1.master_ref, mc_id, nullptr)) {
+      return td::Status::Error(-668, "cannot unpack master_ref in shardchain state of "s + blkid.to_str());
+    }
+    master_ref = mc_id;
+  } else {
+    master_ref = {};
   }
   return td::Status::OK();
 }
@@ -301,6 +311,30 @@ td::Result<td::BufferSlice> ShardStateQ::serialize() const {
   return st_res.move_as_ok();
 }
 
+td::Status ShardStateQ::serialize_to_file(td::FileFd& fd) const {
+  td::PerfWarningTimer perf_timer_{"serializestate", 0.1};
+  if (!data.is_null()) {
+    auto cur_data = data.clone();
+    while (cur_data.size() > 0) {
+      TRY_RESULT(s, fd.write(cur_data.as_slice()));
+      cur_data.confirm_read(s);
+    }
+    return td::Status::OK();
+  }
+  if (root.is_null()) {
+    return td::Status::Error(-666, "cannot serialize an uninitialized state");
+  }
+  vm::BagOfCells new_boc;
+  new_boc.set_root(root);
+  TRY_STATUS(new_boc.import_cells());
+  auto st_res = new_boc.serialize_to_file(fd, 31);
+  if (st_res.is_error()) {
+    LOG(ERROR) << "cannot serialize a shardchain state";
+    return st_res.move_as_error();
+  }
+  return td::Status::OK();
+}
+
 MasterchainStateQ::MasterchainStateQ(const BlockIdExt& _id, td::BufferSlice _data)
     : MasterchainState(), ShardStateQ(_id, std::move(_data)) {
 }
@@ -339,7 +373,8 @@ td::Status MasterchainStateQ::mc_init() {
 td::Status MasterchainStateQ::mc_reinit() {
   auto res = block::ConfigInfo::extract_config(
       root_cell(), block::ConfigInfo::needStateRoot | block::ConfigInfo::needValidatorSet |
-                       block::ConfigInfo::needShardHashes | block::ConfigInfo::needPrevBlocks);
+                       block::ConfigInfo::needShardHashes | block::ConfigInfo::needPrevBlocks |
+                       block::ConfigInfo::needWorkchainInfo);
   cur_validators_.reset();
   next_validators_.reset();
   if (res.is_error()) {
@@ -485,15 +520,15 @@ bool MasterchainStateQ::check_old_mc_block_id(const ton::BlockIdExt& blkid, bool
   return config_ && config_->check_old_mc_block_id(blkid, strict);
 }
 
-td::uint32 MasterchainStateQ::min_split_depth(WorkchainId workchain_id) const {
+td::uint32 MasterchainStateQ::monitor_min_split_depth(WorkchainId workchain_id) const {
   if (!config_) {
     return 0;
   }
   auto wc_info = config_->get_workchain_info(workchain_id);
-  return wc_info.not_null() ? wc_info->actual_min_split : 0;
+  return wc_info.not_null() ? wc_info->monitor_min_split : 0;
 }
 
-td::uint32 MasterchainStateQ::soft_min_split_depth(WorkchainId workchain_id) const {
+td::uint32 MasterchainStateQ::min_split_depth(WorkchainId workchain_id) const {
   if (!config_) {
     return 0;
   }
@@ -528,6 +563,10 @@ BlockIdExt MasterchainStateQ::prev_key_block_id(BlockSeqno seqno) const {
     config_->get_prev_key_block(seqno, block_id);
   }
   return block_id;
+}
+
+bool MasterchainStateQ::is_key_state() const {
+  return config_ ? config_->is_key_state() : false;
 }
 
 }  // namespace validator

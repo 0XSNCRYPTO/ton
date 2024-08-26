@@ -33,6 +33,7 @@
 namespace ton {
 class WalletInterface : public SmartContract {
  public:
+  static constexpr uint32_t EncryptedCommentOp = 0x2167da4b;
   struct Gift {
     block::StdAddress destination;
     td::int64 gramms;
@@ -73,6 +74,8 @@ class WalletInterface : public SmartContract {
                                                  td::uint32 valid_until = std::numeric_limits<td::uint32>::max()) const;
 
   static td::Ref<vm::Cell> create_int_message(const Gift &gift);
+
+ private:
   static void store_gift_message(vm::CellBuilder &cb, const Gift &gift);
 };
 

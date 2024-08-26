@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 #BEGIN internal
 if (NOT TON_ONLY_TONLIB)
@@ -99,6 +99,8 @@ target_link_libraries(adnl-pong PUBLIC tdactor ton_crypto tl_api tdnet common
 add_library(adnltest STATIC ${ADNL_TEST_SOURCE})
 target_include_directories(adnltest PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>)
 target_link_libraries(adnltest PUBLIC adnl )
+
+install(TARGETS adnl-proxy RUNTIME DESTINATION bin)
 endif()
 #END internal
 

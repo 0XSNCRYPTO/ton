@@ -88,6 +88,8 @@ class AdnlPeerPairImpl : public AdnlPeerPair {
   void update_addr_list(AdnlAddressList addr_list) override;
   void update_peer_id(AdnlNodeIdFull id) override;
 
+  void get_conn_ip_str(td::Promise<td::string> promise) override;
+
   void got_data_from_db(td::Result<AdnlDbItem> R);
   void got_data_from_static_nodes(td::Result<AdnlNode> R);
   void got_data_from_dht(td::Result<AdnlNode> R);
@@ -120,6 +122,7 @@ class AdnlPeerPairImpl : public AdnlPeerPair {
   }
 
  private:
+  void respond_with_nop();
   void reinit(td::int32 date);
   td::Result<std::pair<td::actor::ActorId<AdnlNetworkConnection>, bool>> get_conn(bool direct_only);
   void create_channel(pubkeys::Ed25519 pub, td::uint32 date);
@@ -150,6 +153,9 @@ class AdnlPeerPairImpl : public AdnlPeerPair {
       }
     }
   }
+
+  void request_reverse_ping();
+  void request_reverse_ping_result(td::Result<td::Unit> R);
 
   struct Conn {
     class ConnCallback : public AdnlNetworkConnection::Callback {
@@ -209,6 +215,7 @@ class AdnlPeerPairImpl : public AdnlPeerPair {
   pubkeys::Ed25519 channel_pub_;
   td::int32 channel_pk_date_;
   td::actor::ActorOwn<AdnlChannel> channel_;
+  td::Timestamp respond_with_nop_after_;
 
   td::uint64 in_seqno_ = 0;
   td::uint64 out_seqno_ = 0;
@@ -248,6 +255,13 @@ class AdnlPeerPairImpl : public AdnlPeerPair {
   td::Timestamp next_dht_query_at_ = td::Timestamp::never();
   td::Timestamp next_db_update_at_ = td::Timestamp::never();
   td::Timestamp retry_send_at_ = td::Timestamp::never();
+
+  td::Timestamp last_received_packet_ = td::Timestamp::never();
+  td::Timestamp try_reinit_at_ = td::Timestamp::never();
+
+  bool has_reverse_addr_ = false;
+  td::Timestamp request_reverse_ping_after_ = td::Timestamp::now();
+  bool request_reverse_ping_active_ = false;
 };
 
 class AdnlPeerImpl : public AdnlPeer {
@@ -265,6 +279,7 @@ class AdnlPeerImpl : public AdnlPeer {
   void update_addr_list(AdnlNodeIdShort local_id, td::uint32 local_mode, td::actor::ActorId<AdnlLocalId> local_actor,
                         AdnlAddressList addr_list) override;
   void update_dht_node(td::actor::ActorId<dht::Dht> dht_node) override;
+  void get_conn_ip_str(AdnlNodeIdShort l_id, td::Promise<td::string> promise) override;
   //void check_signature(td::BufferSlice data, td::BufferSlice signature, td::Promise<td::Unit> promise) override;
 
   AdnlPeerImpl(td::actor::ActorId<AdnlNetworkManager> network_manager, td::actor::ActorId<AdnlPeerTable> peer_table,
