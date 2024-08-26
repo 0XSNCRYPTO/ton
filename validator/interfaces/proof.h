@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -29,6 +29,7 @@ class ProofLink : public td::CntObject {
  public:
   struct BasicHeaderInfo {
     UnixTime utime;
+    LogicalTime end_lt;
     CatchainSeqno cc_seqno;
     td::uint32 validator_set_hash;
     BlockSeqno prev_key_mc_seqno;
@@ -46,6 +47,9 @@ class Proof : virtual public ProofLink {
   virtual ~Proof() = default;
   virtual td::Result<td::Ref<ProofLink>> export_as_proof_link() const = 0;
 };
+
+td::Result<td::Ref<vm::Cell>> create_block_state_proof(td::Ref<vm::Cell> root);
+td::Result<RootHash> unpack_block_state_proof(BlockIdExt block_id, td::Ref<vm::Cell> proof);
 
 }  // namespace validator
 

@@ -14,11 +14,11 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "vm/cells/DataCell.h"
 
-#include "openssl/digest.h"
+#include "openssl/digest.hpp"
 
 #include "td/utils/ScopeGuard.h"
 
@@ -112,6 +112,9 @@ td::Result<Ref<DataCell>> DataCell::create(td::ConstBitPtr data, unsigned bits, 
     case SpecialType::Library: {
       if (bits != 8 + hash_bytes * 8) {
         return td::Status::Error("Not enouch data for a Library special cell");
+      }
+      if (!refs.empty()) {
+        return td::Status::Error("Library special cell has a cell reference");
       }
       break;
     }

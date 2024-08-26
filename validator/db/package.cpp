@@ -1,3 +1,21 @@
+/*
+    This file is part of TON Blockchain Library.
+
+    TON Blockchain Library is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    TON Blockchain Library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
+
+    Copyright 2019-2020 Telegram Systems LLP
+*/
 #include "package.hpp"
 #include "common/errorcode.h"
 
@@ -34,7 +52,7 @@ td::Status Package::truncate(td::uint64 size) {
   return fd_.truncate_to_current_position(size + header_size());
 }
 
-td::uint64 Package::append(std::string filename, td::Slice data) {
+td::uint64 Package::append(std::string filename, td::Slice data, bool sync) {
   CHECK(data.size() <= max_data_size());
   CHECK(filename.size() <= max_filename_size());
   auto size = fd_.get_size().move_as_ok();
@@ -46,10 +64,22 @@ td::uint64 Package::append(std::string filename, td::Slice data) {
   size += 8;
   CHECK(fd_.pwrite(filename, size).move_as_ok() == filename.size());
   size += filename.size();
-  CHECK(fd_.pwrite(data, size).move_as_ok() == data.size());
-  size += data.size();
-  fd_.sync().ensure();
+  while (data.size() != 0) {
+    auto R = fd_.pwrite(data, size);
+    R.ensure();
+    auto x = R.move_as_ok();
+    CHECK(x > 0);
+    size += x;
+    data.remove_prefix(x);
+  }
+  if (sync) {
+    fd_.sync().ensure();
+  }
   return orig_size - header_size();
+}
+
+void Package::sync() {
+  fd_.sync().ensure();
 }
 
 td::uint64 Package::size() const {
@@ -65,7 +95,8 @@ td::Result<std::pair<std::string, td::BufferSlice>> Package::read(td::uint64 off
     return td::Status::Error(ErrorCode::notready, "too short read");
   }
   if ((header[0] & 0xffff) != entry_header_magic()) {
-    return td::Status::Error(ErrorCode::notready, "bad entry magic");
+    return td::Status::Error(ErrorCode::notready,
+                             PSTRING() << "bad entry magic " << (header[0] & 0xffff) << " offset=" << offset);
   }
   offset += 8;
   auto fname_size = header[0] >> 16;
@@ -138,6 +169,34 @@ td::Result<Package> Package::open(std::string path, bool read_only, bool create)
     }
   }
   return Package{std::move(fd)};
+}
+
+void Package::iterate(std::function<bool(std::string, td::BufferSlice, td::uint64)> func) {
+  td::uint64 p = 0;
+
+  td::uint64 size = fd_.get_size().move_as_ok();
+  if (size < header_size()) {
+    LOG(ERROR) << "too short archive";
+    return;
+  }
+  size -= header_size();
+  while (p != size) {
+    auto R = read(p);
+    if (R.is_error()) {
+      LOG(ERROR) << "broken archive: " << R.move_as_error();
+      return;
+    }
+    auto q = R.move_as_ok();
+    if (!func(q.first, q.second.clone(), p)) {
+      break;
+    }
+
+    p = advance(p).move_as_ok();
+  }
+}
+
+Package::~Package() {
+  fd_.close();
 }
 
 }  // namespace ton

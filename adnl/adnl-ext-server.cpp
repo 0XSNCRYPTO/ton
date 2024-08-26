@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "adnl-ext-server.hpp"
 #include "keys/encryptor.h"
@@ -91,7 +91,7 @@ td::Status AdnlInboundConnection::process_custom_packet(td::BufferSlice &data, b
     auto F = fetch_tl_object<ton_api::tcp_authentificate>(data.clone(), true);
     if (F.is_ok()) {
       if (nonce_.size() > 0 || !remote_id_.is_zero()) {
-        return td::Status::Error(ErrorCode::protoviolation, "duplicate authentificate");
+        return td::Status::Error(ErrorCode::protoviolation, "duplicate authenticate");
       }
       auto f = F.move_as_ok();
       nonce_ = td::SecureString{f->nonce_.size() + 256};

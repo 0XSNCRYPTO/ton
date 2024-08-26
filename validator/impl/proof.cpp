@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "proof.hpp"
 #include "block/block-parse.h"
@@ -88,6 +88,7 @@ td::Result<ProofLink::BasicHeaderInfo> ProofLinkQ::get_basic_header_info() const
     }
     res.cc_seqno = info.gen_catchain_seqno;
     res.utime = info.gen_utime;
+    res.end_lt = info.end_lt;
     res.validator_set_hash = info.gen_validator_list_hash_short;
     res.prev_key_mc_seqno = info.prev_key_block_seqno;
     return res;
@@ -105,7 +106,7 @@ td::Result<ProofLinkQ::VirtualizedProof> ProofLinkQ::get_virtual_root(bool lazy)
   if (lazy) {
     vm::StaticBagOfCellsDbLazy::Options options;
     options.check_crc32c = true;
-    auto res = vm::StaticBagOfCellsDbLazy::create(vm::BufferSliceBlobView::create(data_.clone()), options);
+    auto res = vm::StaticBagOfCellsDbLazy::create(td::BufferSliceBlobView::create(data_.clone()), options);
     if (res.is_error()) {
       return res.move_as_error();
     }
@@ -159,6 +160,41 @@ td::Result<Ref<vm::Cell>> ProofQ::get_signatures_root() const {
     return td::Status::Error(-668, "masterchain block proof is for another block");
   }
   return proof.signatures->prefetch_ref();
+}
+
+td::Result<td::Ref<vm::Cell>> create_block_state_proof(td::Ref<vm::Cell> root) {
+  if (root.is_null()) {
+    return td::Status::Error("root is null");
+  }
+  vm::MerkleProofBuilder mpb{std::move(root)};
+  block::gen::Block::Record block;
+  if (!tlb::unpack_cell(mpb.root(), block) || block.state_update->load_cell().is_error()) {
+    return td::Status::Error("invalid block");
+  }
+  TRY_RESULT(proof, mpb.extract_proof());
+  if (proof.is_null()) {
+    return td::Status::Error("failed to create proof");
+  }
+  return proof;
+}
+
+td::Result<RootHash> unpack_block_state_proof(BlockIdExt block_id, td::Ref<vm::Cell> proof) {
+  auto virt_root = vm::MerkleProof::virtualize(proof, 1);
+  if (virt_root.is_null()) {
+    return td::Status::Error("invalid Merkle proof");
+  }
+  if (virt_root->get_hash().as_slice() != block_id.root_hash.as_slice()) {
+    return td::Status::Error("hash mismatch");
+  }
+  block::gen::Block::Record block;
+  if (!tlb::unpack_cell(virt_root, block)) {
+    return td::Status::Error("invalid block");
+  }
+  vm::CellSlice upd_cs{vm::NoVmSpec(), block.state_update};
+  if (!(upd_cs.is_special() && upd_cs.prefetch_long(8) == 4 && upd_cs.size_ext() == 0x20228)) {
+    return td::Status::Error("invalid Merkle update");
+  }
+  return upd_cs.prefetch_ref(1)->get_hash(0).bits();
 }
 
 }  // namespace validator
