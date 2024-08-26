@@ -529,6 +529,8 @@ target_link_libraries(test-rldp2 adnl adnltest dht rldp2 tl_api)
 add_executable(test-validator-session-state test/test-validator-session-state.cpp)
 target_link_libraries(test-validator-session-state adnl dht rldp validatorsession tl_api)
 
+add_executable(test-overlay test/test-overlay.cpp)
+target_link_libraries(test-overlay overlay tdutils tdactor adnl adnltest tl_api dht )
 add_executable(test-catchain test/test-catchain.cpp)
 target_link_libraries(test-catchain overlay tdutils tdactor adnl adnltest rldp tl_api dht
   catchain )
@@ -538,6 +540,9 @@ target_link_libraries(test-ton-collator overlay tdutils tdactor adnl tl_api dht
 
 add_executable(test-http test/test-http.cpp)
 target_link_libraries(test-http PRIVATE tonhttp)
+
+add_executable(test-emulator test/test-td-main.cpp emulator/test/emulator-tests.cpp)
+target_link_libraries(test-emulator PRIVATE emulator)
 
 get_directory_property(HAS_PARENT PARENT_DIRECTORY)
 if (HAS_PARENT)
@@ -570,6 +575,7 @@ add_test(test-cells test-cells ${TEST_OPTIONS})
 add_test(test-smartcont test-smartcont)
 add_test(test-net test-net)
 add_test(test-actors test-tdactor)
+add_test(test-emulator test-emulator)
 
 #BEGIN tonlib
 add_test(test-tdutils test-tdutils)

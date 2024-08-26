@@ -395,6 +395,7 @@ struct SizeLimitsConfig {
   td::uint32 max_acc_state_cells = 1 << 16;
   td::uint32 max_acc_state_bits = (1 << 16) * 1023;
   td::uint32 max_acc_public_libraries = 256;
+  td::uint32 defer_out_queue_size_limit = 256;
 };
 
 struct CatchainValidatorsConfig {
@@ -413,7 +414,7 @@ struct CatchainValidatorsConfig {
 struct WorkchainInfo : public td::CntObject {
   ton::WorkchainId workchain{ton::workchainInvalid};
   ton::UnixTime enabled_since;
-  td::uint32 actual_min_split;
+  td::uint32 monitor_min_split;
   td::uint32 min_split, max_split;
   bool basic;
   bool active;
@@ -535,6 +536,16 @@ struct PrecompiledContractsConfig {
   td::optional<Contract> get_contract(td::Bits256 code_hash) const;
 };
 
+struct CollatorNodeDescr {
+  ton::ShardIdFull shard;
+  ton::NodeIdShort adnl_id;
+};
+
+struct CollatorConfig {
+  bool full_collated_data = false;
+  std::vector<CollatorNodeDescr> collator_nodes;
+};
+
 class Config {
   enum {
     default_mc_catchain_lifetime = 200,
@@ -648,6 +659,7 @@ class Config {
   std::vector<ton::ValidatorDescr> compute_validator_set(ton::ShardIdFull shard, ton::UnixTime time,
                                                          ton::CatchainSeqno cc_seqno) const;
   std::vector<ton::ValidatorDescr> compute_total_validator_set(int next) const;
+  CollatorConfig get_collator_config(bool need_collator_nodes) const;
   td::Result<SizeLimitsConfig> get_size_limits_config() const;
   static td::Result<SizeLimitsConfig> do_get_size_limits_config(td::Ref<vm::CellSlice> cs);
   std::unique_ptr<vm::Dictionary> get_suspended_addresses(ton::UnixTime now) const;

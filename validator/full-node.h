@@ -72,6 +72,8 @@ class FullNode : public td::actor::Actor {
 
   virtual void add_permanent_key(PublicKeyHash key, td::Promise<td::Unit> promise) = 0;
   virtual void del_permanent_key(PublicKeyHash key, td::Promise<td::Unit> promise) = 0;
+  virtual void add_collator_adnl_id(adnl::AdnlNodeIdShort id) = 0;
+  virtual void del_collator_adnl_id(adnl::AdnlNodeIdShort id) = 0;
 
   virtual void sign_shard_overlay_certificate(ShardIdFull shard_id, PublicKeyHash signed_key,
                                               td::uint32 expiry_at, td::uint32 max_size,
@@ -90,6 +92,9 @@ class FullNode : public td::actor::Actor {
   virtual void process_block_candidate_broadcast(BlockIdExt block_id, CatchainSeqno cc_seqno,
                                                  td::uint32 validator_set_hash, td::BufferSlice data) = 0;
 
+  virtual void import_fast_sync_member_certificate(adnl::AdnlNodeIdShort local_id,
+                                                    overlay::OverlayMemberCertificate cert) = 0;
+
   static constexpr td::uint32 max_block_size() {
     return 4 << 20;
   }
@@ -100,14 +105,12 @@ class FullNode : public td::actor::Actor {
     return 4ull << 30;
   }
 
-  static td::actor::ActorOwn<FullNode> create(ton::PublicKeyHash local_id, adnl::AdnlNodeIdShort adnl_id,
-                                              FileHash zero_state_file_hash, FullNodeConfig config,
-                                              td::actor::ActorId<keyring::Keyring> keyring,
-                                              td::actor::ActorId<adnl::Adnl> adnl, td::actor::ActorId<rldp::Rldp> rldp,
-                                              td::actor::ActorId<rldp2::Rldp> rldp2, td::actor::ActorId<dht::Dht> dht,
-                                              td::actor::ActorId<overlay::Overlays> overlays,
-                                              td::actor::ActorId<ValidatorManagerInterface> validator_manager,
-                                              td::actor::ActorId<adnl::AdnlExtClient> client, std::string db_root);
+  static td::actor::ActorOwn<FullNode> create(
+      ton::PublicKeyHash local_id, adnl::AdnlNodeIdShort adnl_id, FileHash zero_state_file_hash, FullNodeConfig config,
+      td::actor::ActorId<keyring::Keyring> keyring, td::actor::ActorId<adnl::Adnl> adnl,
+      td::actor::ActorId<rldp::Rldp> rldp, td::actor::ActorId<rldp2::Rldp> rldp2, td::actor::ActorId<dht::Dht> dht,
+      td::actor::ActorId<overlay::Overlays> overlays, td::actor::ActorId<ValidatorManagerInterface> validator_manager,
+      td::actor::ActorId<adnl::AdnlExtClient> client, std::string db_root, td::Promise<td::Unit> started_promise);
 };
 
 }  // namespace fullnode

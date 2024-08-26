@@ -20,6 +20,7 @@
 
 #include "interfaces/validator-manager.h"
 #include "interfaces/db.h"
+#include "ton/ton-types.h"
 #include "validator-group.hpp"
 #include "manager-init.h"
 #include "manager-hardfork.h"
@@ -139,6 +140,10 @@ class ValidatorManagerImpl : public ValidatorManager {
                                   td::int64 max_length, td::Promise<td::BufferSlice> promise) override {
     UNREACHABLE();
   }
+  void get_previous_persistent_state_files(
+      BlockSeqno cur_mc_seqno, td::Promise<std::vector<std::pair<std::string, ShardIdFull>>> promise) override {
+    UNREACHABLE();
+  }
   void get_block_proof(BlockHandle handle, td::Promise<td::BufferSlice> promise) override;
   void get_block_proof_link(BlockHandle block_id, td::Promise<td::BufferSlice> promise) override;
   void get_key_block_proof(BlockIdExt block_id, td::Promise<td::BufferSlice> promise) override;
@@ -186,6 +191,10 @@ class ValidatorManagerImpl : public ValidatorManager {
                         td::Promise<td::Ref<ShardState>> promise) override;
   void wait_block_state_short(BlockIdExt block_id, td::uint32 priority, td::Timestamp timeout,
                               td::Promise<td::Ref<ShardState>> promise) override;
+  void wait_neighbor_msg_queue_proofs(ShardIdFull dst_shard, std::vector<BlockIdExt> blocks, td::Timestamp timeout,
+                                      td::Promise<std::map<BlockIdExt, td::Ref<OutMsgQueueProof>>> promise) override {
+    UNREACHABLE();
+  }
 
   void set_block_data(BlockHandle handle, td::Ref<BlockData> data, td::Promise<td::Unit> promise) override {
     UNREACHABLE();
@@ -235,7 +244,7 @@ class ValidatorManagerImpl : public ValidatorManager {
   void get_external_messages(ShardIdFull shard,
                              td::Promise<std::vector<std::pair<td::Ref<ExtMessage>, int>>> promise) override;
   void get_ihr_messages(ShardIdFull shard, td::Promise<std::vector<td::Ref<IhrMessage>>> promise) override;
-  void get_shard_blocks(BlockIdExt masterchain_block_id,
+  void get_shard_blocks_for_collator(BlockIdExt masterchain_block_id,
                         td::Promise<std::vector<td::Ref<ShardTopBlockDescription>>> promise) override;
   void complete_external_messages(std::vector<ExtMessage::Hash> to_delay,
                                   std::vector<ExtMessage::Hash> to_delete) override {
@@ -254,6 +263,7 @@ class ValidatorManagerImpl : public ValidatorManager {
   void get_shard_state_from_db_short(BlockIdExt block_id, td::Promise<td::Ref<ShardState>> promise) override;
   void get_block_candidate_from_db(PublicKey source, BlockIdExt id, FileHash collated_data_file_hash,
                                    td::Promise<BlockCandidate> promise) override;
+  void get_candidate_data_by_block_id_from_db(BlockIdExt id, td::Promise<td::BufferSlice> promise) override;
   void get_block_proof_from_db(ConstBlockHandle handle, td::Promise<td::Ref<Proof>> promise) override;
   void get_block_proof_from_db_short(BlockIdExt id, td::Promise<td::Ref<Proof>> promise) override;
   void get_block_proof_link_from_db(ConstBlockHandle handle, td::Promise<td::Ref<ProofLink>> promise) override;
@@ -323,14 +333,21 @@ class ValidatorManagerImpl : public ValidatorManager {
   }
   void send_block_broadcast(BlockBroadcast broadcast, bool custom_overlays_only) override {
   }
+  void send_get_out_msg_queue_proof_request(ShardIdFull dst_shard, std::vector<BlockIdExt> blocks,
+                                            block::ImportedMsgQueueLimits limits,
+                                            td::Promise<std::vector<td::Ref<OutMsgQueueProof>>> promise) override {
+    UNREACHABLE();
+  }
+  void send_download_archive_request(BlockSeqno mc_seqno, ShardIdFull shard_prefix, std::string tmp_dir,
+                                     td::Timestamp timeout, td::Promise<std::string> promise) override {
+    UNREACHABLE();
+  }
 
   void update_shard_client_state(BlockIdExt masterchain_block_id, td::Promise<td::Unit> promise) override {
     UNREACHABLE();
   }
   void get_shard_client_state(bool from_db, td::Promise<BlockIdExt> promise) override {
     UNREACHABLE();
-  }
-  void subscribe_to_shard(ShardIdFull shard) override {
   }
 
   void update_async_serializer_state(AsyncSerializerState state, td::Promise<td::Unit> promise) override {
@@ -347,7 +364,8 @@ class ValidatorManagerImpl : public ValidatorManager {
     promise.set_error(td::Status::Error(ErrorCode::error, "download disabled"));
   }
 
-  void get_archive_id(BlockSeqno masterchain_seqno, td::Promise<td::uint64> promise) override {
+  void get_archive_id(BlockSeqno masterchain_seqno, ShardIdFull shard_prefix,
+                      td::Promise<td::uint64> promise) override {
     UNREACHABLE();
   }
   void get_archive_slice(td::uint64 archive_id, td::uint64 offset, td::uint32 limit,
@@ -446,10 +464,13 @@ class ValidatorManagerImpl : public ValidatorManager {
   void log_new_validator_group_stats(validatorsession::NewValidatorGroupStats stats) override {
     UNREACHABLE();
   }
-  void get_out_msg_queue_size(BlockIdExt block_id, td::Promise<td::uint32> promise) override {
+  void log_end_validator_group_stats(validatorsession::EndValidatorGroupStats stats) override {
+    UNREACHABLE();
+  }
+  void get_out_msg_queue_size(BlockIdExt block_id, td::Promise<td::uint64> promise) override {
     if (queue_size_counter_.empty()) {
-      queue_size_counter_ =
-          td::actor::create_actor<QueueSizeCounter>("queuesizecounter", td::Ref<MasterchainState>{}, actor_id(this));
+      queue_size_counter_ = td::actor::create_actor<QueueSizeCounter>("queuesizecounter", td::Ref<MasterchainState>{},
+                                                                      opts_, actor_id(this));
     }
     td::actor::send_closure(queue_size_counter_, &QueueSizeCounter::get_queue_size, block_id, std::move(promise));
   }
@@ -485,6 +506,15 @@ class ValidatorManagerImpl : public ValidatorManager {
   }
   void update_options(td::Ref<ValidatorManagerOptions> opts) override {
     opts_ = std::move(opts);
+  }
+  void add_persistent_state_description(td::Ref<PersistentStateDescription> desc) override {
+  }
+
+  void add_collator(adnl::AdnlNodeIdShort id, ShardIdFull shard) override {
+    UNREACHABLE();
+  }
+  void del_collator(adnl::AdnlNodeIdShort id, ShardIdFull shard) override {
+    UNREACHABLE();
   }
 
  private:

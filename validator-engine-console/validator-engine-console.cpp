@@ -147,6 +147,18 @@ void ValidatorEngineConsole::run() {
   add_query_runner(std::make_unique<QueryRunnerImpl<DelCustomOverlayQuery>>());
   add_query_runner(std::make_unique<QueryRunnerImpl<ShowCustomOverlaysQuery>>());
   add_query_runner(std::make_unique<QueryRunnerImpl<SetStateSerializerEnabledQuery>>());
+  add_query_runner(std::make_unique<QueryRunnerImpl<SetCollatorOptionsJsonQuery>>());
+  add_query_runner(std::make_unique<QueryRunnerImpl<ResetCollatorOptionsQuery>>());
+  add_query_runner(std::make_unique<QueryRunnerImpl<GetCollatorOptionsJsonQuery>>());
+  add_query_runner(std::make_unique<QueryRunnerImpl<AddCollatorQuery>>());
+  add_query_runner(std::make_unique<QueryRunnerImpl<AddShardQuery>>());
+  add_query_runner(std::make_unique<QueryRunnerImpl<DelShardQuery>>());
+  add_query_runner(std::make_unique<QueryRunnerImpl<DelCollatorQuery>>());
+  add_query_runner(std::make_unique<QueryRunnerImpl<SetCollatorsListQuery>>());
+  add_query_runner(std::make_unique<QueryRunnerImpl<ClearCollatorsListQuery>>());
+  add_query_runner(std::make_unique<QueryRunnerImpl<ShowCollatorsListQuery>>());
+  add_query_runner(std::make_unique<QueryRunnerImpl<SignOverlayMemberCertificateQuery>>());
+  add_query_runner(std::make_unique<QueryRunnerImpl<ImportFastSyncMemberCertificateQuery>>());
 }
 
 bool ValidatorEngineConsole::envelope_send_query(td::BufferSlice query, td::Promise<td::BufferSlice> promise) {

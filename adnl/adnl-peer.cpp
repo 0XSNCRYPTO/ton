@@ -269,7 +269,11 @@ void AdnlPeerPairImpl::send_messages_in(std::vector<OutboundAdnlMessage> message
     size_t ptr = 0;
     bool first = true;
     do {
+      respond_with_nop_after_ = td::Timestamp::in(td::Random::fast(1.0, 2.0));
       bool try_reinit = try_reinit_at_ && try_reinit_at_.is_in_past();
+      if (try_reinit) {
+        try_reinit_at_ = td::Timestamp::in(td::Random::fast(0.5, 1.5));
+      }
       bool via_channel = channel_ready_ && !try_reinit;
       size_t s = (via_channel ? channel_packet_header_max_size() : packet_header_max_size());
       if (first) {
@@ -520,6 +524,7 @@ void AdnlPeerPairImpl::process_message(const adnlmessage::AdnlMessageConfirmChan
 }
 
 void AdnlPeerPairImpl::process_message(const adnlmessage::AdnlMessageCustom &message) {
+  respond_with_nop();
   td::actor::send_closure(local_actor_, &AdnlLocalId::deliver, peer_id_short_, message.data());
 }
 
@@ -532,6 +537,7 @@ void AdnlPeerPairImpl::process_message(const adnlmessage::AdnlMessageReinit &mes
 }
 
 void AdnlPeerPairImpl::process_message(const adnlmessage::AdnlMessageQuery &message) {
+  respond_with_nop();
   auto P = td::PromiseCreator::lambda([SelfId = actor_id(this), query_id = message.query_id(),
                                        flags = static_cast<td::uint32>(0)](td::Result<td::BufferSlice> R) {
     if (R.is_error()) {
@@ -550,6 +556,7 @@ void AdnlPeerPairImpl::process_message(const adnlmessage::AdnlMessageQuery &mess
 }
 
 void AdnlPeerPairImpl::process_message(const adnlmessage::AdnlMessageAnswer &message) {
+  respond_with_nop();
   auto Q = out_queries_.find(message.query_id());
 
   if (Q == out_queries_.end()) {
@@ -567,6 +574,7 @@ void AdnlPeerPairImpl::process_message(const adnlmessage::AdnlMessageAnswer &mes
 }
 
 void AdnlPeerPairImpl::process_message(const adnlmessage::AdnlMessagePart &message) {
+  respond_with_nop();
   auto size = message.total_size();
   if (size > huge_packet_max_size()) {
     VLOG(ADNL_WARNING) << this << ": dropping too big huge message: size=" << size;
@@ -626,6 +634,14 @@ void AdnlPeerPairImpl::delete_query(AdnlQueryId id) {
 
   if (Q != out_queries_.end()) {
     out_queries_.erase(Q);
+  }
+}
+
+void AdnlPeerPairImpl::respond_with_nop() {
+  if (respond_with_nop_after_.is_in_past()) {
+    std::vector<OutboundAdnlMessage> messages;
+    messages.emplace_back(adnlmessage::AdnlMessageNop{}, 0);
+    send_messages(std::move(messages));
   }
 }
 

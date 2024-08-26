@@ -46,6 +46,7 @@ set(VALIDATOR_HEADERS
   interfaces/db.h
   interfaces/external-message.h
   interfaces/liteserver.h
+  interfaces/out-msg-queue-proof.h
   interfaces/proof.h
   interfaces/shard.h
   interfaces/signature-set.h
@@ -57,6 +58,7 @@ set(VALIDATOR_HEADERS
   import-db-slice.hpp
   queue-size-counter.hpp
 
+  collator-node.hpp
   manager-disk.h
   manager-disk.hpp
   manager-init.h
@@ -72,6 +74,7 @@ set(VALIDATOR_HEADERS
 set(VALIDATOR_SOURCE
   apply-block.cpp
   block-handle.cpp
+  collator-node.cpp
   get-next-key-blocks.cpp
   import-db-slice.cpp
   shard-client.cpp
@@ -150,6 +153,8 @@ set(FULL_NODE_SOURCE
   full-node-private-overlay.cpp
   full-node-serializer.hpp
   full-node-serializer.cpp
+  full-node-fast-sync-overlays.hpp
+  full-node-fast-sync-overlays.cpp
 
   net/download-block.hpp
   net/download-block.cpp

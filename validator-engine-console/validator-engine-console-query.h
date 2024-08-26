@@ -1229,3 +1229,272 @@ class SetStateSerializerEnabledQuery : public Query {
  private:
   bool enabled_;
 };
+
+class SetCollatorOptionsJsonQuery : public Query {
+ public:
+  SetCollatorOptionsJsonQuery(td::actor::ActorId<ValidatorEngineConsole> console, Tokenizer tokenizer)
+      : Query(console, std::move(tokenizer)) {
+  }
+  td::Status run() override;
+  td::Status send() override;
+  td::Status receive(td::BufferSlice data) override;
+  static std::string get_name() {
+    return "setcollatoroptionsjson";
+  }
+  static std::string get_help() {
+    return "setcollatoroptionsjson <filename>\tset collator options from file <filename>";
+  }
+  std::string name() const override {
+    return get_name();
+  }
+
+ private:
+  std::string file_name_;
+};
+
+class ResetCollatorOptionsQuery : public Query {
+ public:
+  ResetCollatorOptionsQuery(td::actor::ActorId<ValidatorEngineConsole> console, Tokenizer tokenizer)
+      : Query(console, std::move(tokenizer)) {
+  }
+  td::Status run() override;
+  td::Status send() override;
+  td::Status receive(td::BufferSlice data) override;
+  static std::string get_name() {
+    return "resetcollatoroptions";
+  }
+  static std::string get_help() {
+    return "resetcollatoroptions\tset collator options to default values";
+  }
+  std::string name() const override {
+    return get_name();
+  }
+};
+
+class GetCollatorOptionsJsonQuery : public Query {
+ public:
+  GetCollatorOptionsJsonQuery(td::actor::ActorId<ValidatorEngineConsole> console, Tokenizer tokenizer)
+      : Query(console, std::move(tokenizer)) {
+  }
+  td::Status run() override;
+  td::Status send() override;
+  td::Status receive(td::BufferSlice data) override;
+  static std::string get_name() {
+    return "getcollatoroptionsjson";
+  }
+  static std::string get_help() {
+    return "getcollatoroptionsjson <filename>\tsave current collator options to file <filename>";
+  }
+  std::string name() const override {
+    return get_name();
+  }
+
+ private:
+  std::string file_name_;
+};
+
+class AddCollatorQuery : public Query {
+ public:
+  AddCollatorQuery(td::actor::ActorId<ValidatorEngineConsole> console, Tokenizer tokenizer)
+      : Query(console, std::move(tokenizer)) {
+  }
+  td::Status run() override;
+  td::Status send() override;
+  td::Status receive(td::BufferSlice data) override;
+  static std::string get_name() {
+    return "addcollator";
+  }
+  static std::string get_help() {
+    return "addcollator <adnl_id> <workchain> <shard>\tadd collator with given adnl_id and shard";
+  }
+  std::string name() const override {
+    return get_name();
+  }
+
+ private:
+  ton::PublicKeyHash adnl_id_;
+  td::int32 wc_;
+  td::int64 shard_;
+};
+
+class AddShardQuery : public Query {
+ public:
+  AddShardQuery(td::actor::ActorId<ValidatorEngineConsole> console, Tokenizer tokenizer)
+      : Query(console, std::move(tokenizer)) {
+  }
+  td::Status run() override;
+  td::Status send() override;
+  td::Status receive(td::BufferSlice data) override;
+  static std::string get_name() {
+    return "addshard";
+  }
+  static std::string get_help() {
+    return "addshard <workchain> <shard>\tstart monitoring shard";
+  }
+  std::string name() const override {
+    return get_name();
+  }
+
+ private:
+  td::int32 wc_;
+  td::int64 shard_;
+};
+
+class DelCollatorQuery : public Query {
+ public:
+  DelCollatorQuery(td::actor::ActorId<ValidatorEngineConsole> console, Tokenizer tokenizer)
+      : Query(console, std::move(tokenizer)) {
+  }
+  td::Status run() override;
+  td::Status send() override;
+  td::Status receive(td::BufferSlice data) override;
+  static std::string get_name() {
+    return "delcollator";
+  }
+  static std::string get_help() {
+    return "delcollator <adnl_id> <workchain> <shard>\tremove collator with given adnl_id and shard";
+  }
+  std::string name() const override {
+    return get_name();
+  }
+
+ private:
+  ton::PublicKeyHash adnl_id_;
+  td::int32 wc_;
+  td::int64 shard_;
+};
+
+class DelShardQuery : public Query {
+ public:
+  DelShardQuery(td::actor::ActorId<ValidatorEngineConsole> console, Tokenizer tokenizer)
+      : Query(console, std::move(tokenizer)) {
+  }
+  td::Status run() override;
+  td::Status send() override;
+  td::Status receive(td::BufferSlice data) override;
+  static std::string get_name() {
+    return "delshard";
+  }
+  static std::string get_help() {
+    return "delshard <workchain> <shard>\tstop monitoring shard";
+  }
+  std::string name() const override {
+    return get_name();
+  }
+
+ private:
+  td::int32 wc_;
+  td::int64 shard_;
+};
+
+class SetCollatorsListQuery : public Query {
+ public:
+  SetCollatorsListQuery(td::actor::ActorId<ValidatorEngineConsole> console, Tokenizer tokenizer)
+      : Query(console, std::move(tokenizer)) {
+  }
+  td::Status run() override;
+  td::Status send() override;
+  td::Status receive(td::BufferSlice data) override;
+  static std::string get_name() {
+    return "setcollatorslist";
+  }
+  static std::string get_help() {
+    return "setcollatorslist <filename>\tset list of collators from file <filename>";
+  }
+  std::string name() const override {
+    return get_name();
+  }
+
+ private:
+  std::string file_name_;
+};
+
+class ClearCollatorsListQuery : public Query {
+ public:
+  ClearCollatorsListQuery(td::actor::ActorId<ValidatorEngineConsole> console, Tokenizer tokenizer)
+      : Query(console, std::move(tokenizer)) {
+  }
+  td::Status run() override;
+  td::Status send() override;
+  td::Status receive(td::BufferSlice data) override;
+  static std::string get_name() {
+    return "clearcollatorslist";
+  }
+  static std::string get_help() {
+    return "clearcollatorslist\tclear list of collators";
+  }
+  std::string name() const override {
+    return get_name();
+  }
+};
+
+class ShowCollatorsListQuery : public Query {
+ public:
+  ShowCollatorsListQuery(td::actor::ActorId<ValidatorEngineConsole> console, Tokenizer tokenizer)
+      : Query(console, std::move(tokenizer)) {
+  }
+  td::Status run() override;
+  td::Status send() override;
+  td::Status receive(td::BufferSlice data) override;
+  static std::string get_name() {
+    return "showcollatorslist";
+  }
+  static std::string get_help() {
+    return "showcollatorslist\tshow list of collators";
+  }
+  std::string name() const override {
+    return get_name();
+  }
+};
+
+class SignOverlayMemberCertificateQuery : public Query {
+ public:
+  SignOverlayMemberCertificateQuery(td::actor::ActorId<ValidatorEngineConsole> console, Tokenizer tokenizer)
+      : Query(console, std::move(tokenizer)) {
+  }
+  td::Status run() override;
+  td::Status send() override;
+  td::Status receive(td::BufferSlice data) override;
+  static std::string get_name() {
+    return "signoverlaymembercertificate";
+  }
+  static std::string get_help() {
+    return "signoverlaymembercertificate <key_hash> <adnl_id> <slot> <expire_at> <filename>\tsign overlay member "
+           "certificate for <adnl_id> (hex) with <key_hash> (hex) in slot <slot>, valid until <expire_at>, "
+           "save to <filename>";
+  }
+  std::string name() const override {
+    return get_name();
+  }
+
+ private:
+  td::Bits256 key_hash_;
+  td::Bits256 adnl_id_;
+  int slot_;
+  ton::UnixTime expire_at_;
+  std::string file_name_;
+};
+
+class ImportFastSyncMemberCertificateQuery : public Query {
+ public:
+  ImportFastSyncMemberCertificateQuery(td::actor::ActorId<ValidatorEngineConsole> console, Tokenizer tokenizer)
+      : Query(console, std::move(tokenizer)) {
+  }
+  td::Status run() override;
+  td::Status send() override;
+  td::Status receive(td::BufferSlice data) override;
+  static std::string get_name() {
+    return "importfastsyncmembercertificate";
+  }
+  static std::string get_help() {
+    return "importfastsyncmembercertificate <adnl_id> <filename>\timport member certificate for fast sync overlay "
+           "for <adnl_id> (hex) from <filename>";
+  }
+  std::string name() const override {
+    return get_name();
+  }
+
+ private:
+  td::Bits256 adnl_id_;
+  std::string file_name_;
+};

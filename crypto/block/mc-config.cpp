@@ -1956,6 +1956,7 @@ td::Result<SizeLimitsConfig> Config::do_get_size_limits_config(td::Ref<vm::CellS
     limits.max_acc_state_bits = rec.max_acc_state_bits;
     limits.max_acc_state_cells = rec.max_acc_state_cells;
     limits.max_acc_public_libraries = rec.max_acc_public_libraries;
+    limits.defer_out_queue_size_limit = rec.defer_out_queue_size_limit;
   };
   gen::SizeLimitsConfig::Record_size_limits_config rec_v1;
   gen::SizeLimitsConfig::Record_size_limits_config_v2 rec_v2;
@@ -2074,7 +2075,7 @@ bool WorkchainInfo::unpack(ton::WorkchainId wc, vm::CellSlice& cs) {
   }
   auto unpack_v1 = [this](auto& info) {
     enabled_since = info.enabled_since;
-    actual_min_split = info.actual_min_split;
+    monitor_min_split = info.monitor_min_split;
     min_split = info.min_split;
     max_split = info.max_split;
     basic = info.basic;
@@ -2341,6 +2342,30 @@ td::optional<PrecompiledContractsConfig::Contract> PrecompiledContractsConfig::g
   Contract c;
   c.gas_usage = rec.gas_usage;
   return c;
+}
+
+CollatorConfig Config::get_collator_config(bool need_collator_nodes) const {
+  CollatorConfig collator_config;
+  gen::CollatorConfig::Record rec;
+  auto cell = get_config_param(41, -41);
+  if (cell.is_null() || !tlb::unpack_cell(std::move(cell), rec)) {
+    return collator_config;
+  }
+  collator_config.full_collated_data = rec.full_collated_data;
+  if (need_collator_nodes) {
+    vm::Dictionary dict{rec.collator_nodes->prefetch_ref(), 32 + 64 + 256};
+    dict.check_for_each([&](Ref<vm::CellSlice> value, td::ConstBitPtr key, int n) {
+      CHECK(n == 32 + 64 + 256);
+      auto workchain = (td::int32)key.get_int(32);
+      key.advance(32);
+      td::uint64 shard = key.get_uint(64);
+      key.advance(64);
+      td::Bits256 adnl_id(key);
+      collator_config.collator_nodes.push_back({ton::ShardIdFull(workchain, shard), adnl_id});
+      return true;
+    });
+  }
+  return collator_config;
 }
 
 }  // namespace block

@@ -290,10 +290,6 @@ cont bless(slice s) pure asm "BLESS";
 /// Notice that [set_gas_limit] with an argument `limit ≥ 2^63 − 1` is equivalent to [accept_message].
 () set_gas_limit(int limit) asm "SETGASLIMIT";
 
-/// Commits the current state of registers `c4` (“persistent data”) and `c5` (“actions”)
-/// so that the current execution is considered “successful” with the saved values even if an exception
-/// in Computation Phase is thrown later.
-() commit() asm "COMMIT";
 
 /// Not implemented
 //() buy_gas(int gram) asm "BUYGAS";
@@ -338,10 +334,10 @@ int muldivc(int x, int y, int z) pure builtin;
 
   It is said that a primitive _loads_ some data,
   if it returns the data and the remainder of the slice
-  (so it can also be used as [modifying method](https://ton.org/docs/#/func/statements?id=modifying-methods)).
+  (so it can also be used as [modifying method](https://docs.ton.org/develop/func/statements#modifying-methods)).
 
   It is said that a primitive _preloads_ some data, if it returns only the data
-  (it can be used as [non-modifying method](https://ton.org/docs/#/func/statements?id=non-modifying-methods)).
+  (it can be used as [non-modifying method](https://docs.ton.org/develop/func/statements#non-modifying-methods)).
 
   Unless otherwise stated, loading and preloading primitives read the data from a prefix of the slice.
 */
@@ -470,7 +466,7 @@ int builder_depth(builder b) pure asm "BDEPTH";
   # Builder primitives
   It is said that a primitive _stores_ a value `x` into a builder `b`
   if it returns a modified version of the builder `b'` with the value `x` stored at the end of it.
-  It can be used as [non-modifying method](https://ton.org/docs/#/func/statements?id=non-modifying-methods).
+  It can be used as [non-modifying method](https://docs.ton.org/develop/func/statements#non-modifying-methods).
 
   All the primitives below first check whether there is enough space in the `builder`,
   and only then check the range of the value being serialized.
